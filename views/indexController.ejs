@@ -1,0 +1,122 @@
+<script>
+    const memoTitle = document.querySelector("#memo-title");
+    const memoContent = document.querySelector("#memo-content");
+    const memoUsername = document.querySelector("#memo-username");
+    const newMemoBtn = document.querySelector("#newMemoBtn");
+
+    let cardCount = 0;      // The number of cards
+    let row;                // The querySelector result of div 'row'
+
+    newMemoBtn.addEventListener("click", async () => {
+        const memoData = {
+            title: memoTitle.value,
+            content: memoContent.value
+        };
+        const username = memoUsername.value;
+        
+        const postUrl = 'https://ncufresh-cloudrun-p2qvm7cmaq-uc.a.run.app/users/' + username;
+        memoTitle.value = memoContent.value = memoUsername.value = "";
+
+        if (cardCount % 3 === 0) {  // 3 cards per row
+            row = createRow();
+            const cardContainer = document.querySelector("#card-container");
+            cardContainer.appendChild(row);
+        }
+        let card = createCard(memoData.title, memoData.content, username);
+        row.appendChild(card);
+
+        let response = await fetch(postUrl, {
+            method: "POST",
+            body: JSON.stringify(memoData),
+            headers: new Headers(
+                { "Content-Type": "application/json" }
+            )
+        });
+
+        let jsonResponse = await response.json();
+        cardCount++;
+    });
+
+    /* The utility function for creating row */
+    let createRow = () => {
+        let row = document.createElement("div");
+        row.classList.add("row");
+        return row;
+    };
+
+    /* The utility function for creating card */
+    let createCard = (title, content, username, memoId) => {
+        // Create card
+        let card = document.createElement("div");
+        card.classList.add("card");
+        card.classList.add("col-sm");
+        card.style.width = "18rem";
+        // card.setAttribute("memoid", memoId);
+
+        // Create card body
+        let cardBody = document.createElement("div");
+        cardBody.classList.add("card-body");
+
+        // Create card title
+        let cardTitle = document.createElement("h5");
+        cardTitle.classList.add("card-title");
+        cardTitle.innerText = title;
+
+        // Create card subtitle(username)
+        let cardSubTitle = document.createElement("h6");
+        cardSubTitle.classList.add("card-subtitle");
+        cardSubTitle.classList.add("mb-2");
+        cardSubTitle.classList.add("text-muted");
+        cardSubTitle.innerText = username;
+
+        // Create card text(content)
+        let cardText = document.createElement("p");
+        cardText.classList.add("card-text");
+        cardText.innerText = content;
+
+        // Create card delete button
+        let cardDeleteBtn = document.createElement("a");
+        cardDeleteBtn.classList.add("btn");
+        cardDeleteBtn.classList.add("btn-danger");
+        cardDeleteBtn.innerText = "Delete";
+        cardDeleteBtn.addEventListener('click', async (event) => {
+            card.remove();
+            const deleteUrl = 'https://ncufresh-cloudrun-p2qvm7cmaq-uc.a.run.app/memoID/' + memoId;
+            let response = await fetch(deleteUrl, {
+                headers: { "Content-Type": "application/json" },
+                method: "DELETE"
+            });
+            let jsonResponse = await response.json();
+        });
+
+        // Append to card div
+        card.appendChild(cardBody);
+        cardBody.appendChild(cardTitle);
+        cardBody.appendChild(cardSubTitle);
+        cardBody.appendChild(cardText);
+        cardBody.appendChild(cardDeleteBtn);
+
+        return card;
+    }
+
+    /* Get all memos and set memos in the page */
+    let setMemoPage = async () => {
+        const getUrl = 'https://ncufresh-cloudrun-p2qvm7cmaq-uc.a.run.app/';
+        let response = await fetch(getUrl);
+        let jsonResponse = await response.json();
+        cardCount = jsonResponse.length;
+
+        const cardContainer = document.querySelector("#card-container");
+        // create row with cards (3 cards per row)
+        for (let i = 0; i < jsonResponse.length; i++) {
+            if (i % 3 === 0) {
+                row = createRow();
+                cardContainer.appendChild(row);
+            }
+            let card = createCard(jsonResponse[i].title, jsonResponse[i].content, jsonResponse[i].user, jsonResponse[i].id);
+            row.appendChild(card);
+        }
+    }
+
+    window.onload = setMemoPage();      // set all memos when page being loaded
+</script>
